@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script
+src="https://code.jquery.com/jquery-3.2.0.slim.min.js"
+integrity="sha256-qLAv0kBAihcHZLI3fv3WITKeRsUX27hd6upBBa0MSow="
+crossorigin="anonymous"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
+  <script src="http://cdn.jsdelivr.net/sockjs/0.3/sockjs.min.js"></script>
+  <script>
+    $(function() {
+        var table_items = ['uptime']
+        var graph_items = [], data = [], totalPoints = 60;
+
+        function appendData(values) {
+           graph_items = Object.keys(values);
+           if (data.length >= totalPoints)
+              data = data.slice(1);
+           data.push(values);
+        }
+
+        function convertValues(name) {
+          var res = [];
+          for (var i = 0; i < data.length; ++i) {
+            res.push([i, data[i][name]]);
+          }
+          return res;
+        }
+
+        function prepareGraphData() {
+          var res = [];
+
+          for (var i in graph_items) {
+            var name = graph_items[i];
+            res.push({
+              label: name,
+              data: convertValues(name)
+            });
+          }
+
+          return res;
+        }
+
+        function plotTelemetry(data) {
+            appendData(data);
+
+            plot.setData(prepareGraphData());
+            plot.setupGrid();
+            plot.draw();
+
+            // Update table of values
+            var table = $('#table');
+            table.empty();
+            var table_body = $('<table/>');
+            for (var i in data) {
+              if (table_items.indexOf(i) < 0) continue;
+              var item = data[i];
+              $('<tr/>')
+                .append($('<td/>').text(i))
+                .append($('<td/>').text(item))
+                .appendTo(table_body);
+            }
+            table_body.appendTo(table);
+
+            // Update plots
+            var table1 = $('#tables');
+            table1.empty();
+            var table1_body = $('<table/>');
+            for (var i in data) {
+              var item = data[i];
+              $('<tr/>')
+                .append($('<td/>').text(i))
+                .append($('<td/>').text(item))
+                .appendTo(table1_body);
+            }
+            table1_body.appendTo(table1);
+        }
+        var options = {
+          series: { lines: { show: true } },
+          yaxis: { min: 0, },
+          xaxis: { show: false }
+        };
+
+        var plot = $.plot('#plot1', prepareGraphData(), options);
+        var conn = new SockJS('http://' + window.location.host + '/telemetry');
+        conn.onmessage = function(e) {
+           plotTelemetry(JSON.parse(e.data));
+        }
+    });
+</script>
+</head>
+<body>
+  <h1>Flight Display</h1>
+  <div id="table"></div>
+  <h3>Telemetry</h3>
+  <div id="plot1" style="width:400px;height:200px;float:left;"></div>
+  <div id="table1"></div>
+</body>
+</html>

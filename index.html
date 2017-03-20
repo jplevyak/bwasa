@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+  <script src="http://cdn.jsdelivr.net/sockjs/0.3/sockjs.min.js"></script>
+  <script>
+    $(function() {
+      var timer = null;
+      var sent = 0;
+      var recv = 0;
+
+      function refresh() {
+        $('#msg').text('Messages Sent: ' + sent + ' Messages Received: ' + recv);
+      }
+
+      var conn = new SockJS('http://localhost:8080/broadcast');
+
+      conn.onopen = function() {
+        function sendPing()
+        {
+          sent += 1;
+          refresh();
+
+          conn.send('msg');
+
+          timer = setTimeout(sendPing, 100);
+        }
+        timer = setTimeout(sendPing, 100);
+      };
+
+      conn.onmessage = function(e) {
+        recv += 1;
+      }
+
+      conn.onclose = function() {
+        if (timer != null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      };
+    });
+</script>
+</head>
+<body>
+<h1>BWASA Flight Computer</h1>
+<h3><a href="flight_display">Flight Display</a>
+<h3>Communication Status</h3>
+<div id="msg"></div>
+</body>
+</html>
